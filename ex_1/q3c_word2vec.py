@@ -38,10 +38,11 @@ def naive_softmax_loss_and_gradient(
     """
 
     ### YOUR CODE HERE
-    raise NotImplementedError
+    numerator = softmax(outside_vectors[outside_word_idx, :] * center_word_vec.transpose())
+    denominator = sum([outside_vectors[ind, :] * center_word_vec.transpose()  for ind in len(outside_vectors)])
     ### END YOUR CODE
 
-    return loss, grad_center_vec, grad_outside_vecs
+    #return loss, grad_center_vec, grad_outside_vecs
 
 
 def neg_sampling_loss_and_gradient(
