@@ -1,0 +1,67 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{bm}
+
+\usepackage[shortlabels]{enumitem}
+\usepackage[noabbrev, capitalise]{cleveref}
+
+\usepackage{geometry}
+ \geometry{
+ a4paper,
+ top=20mm,
+ bottom=25mm,
+ left=25mm,
+ right=25mm,
+ }
+
+% define your IDs here:
+\newcommand{\firststudentid}{123456789}
+\newcommand{\secondstudentid}{987654321}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Written Solution for Assignment 1}
+\chead{\firststudentid \qquad \secondstudentid}
+\lhead{Natural Language Processing}
+\rfoot{Page \thepage \hspace{1pt} of \pageref{LastPage}}
+\renewcommand{\footrulewidth}{1pt}
+ 
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1em}
+\renewcommand{\baselinestretch}{1.25}
+
+\renewcommand{\thesubsection}{\thesection.\alph{subsection}}
+\renewcommand{\thesubsubsection}{\thesubsection.\roman{subsubsection}}
+
+\begin{document}
+
+\refstepcounter{section}
+\section{Understanding word2vec}
+\subsection{}
+YOUR ANSWER HERE
+\subsection{}
+YOUR ANSWER HERE
+\subsection{}
+YOUR ANSWER HERE
+\subsection{}
+YOUR ANSWER HERE
+\subsection{}
+YOUR ANSWER HERE
+\refstepcounter{subsection}
+\subsubsection{}
+YOUR ANSWER HERE
+\subsubsection{}
+YOUR ANSWER HERE
+\subsubsection{}
+YOUR ANSWER HERE
+\section{Implementing word2vec}
+\setcounter{subsection}{4}
+\subsection{}
+YOUR ANSWER HERE
+
+\end{document}
