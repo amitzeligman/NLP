@@ -37,12 +37,19 @@ def naive_softmax_loss_and_gradient(
                     (dJ / dU)
     """
 
-    ### YOUR CODE HERE
-    numerator = softmax(outside_vectors[outside_word_idx, :] * center_word_vec.transpose())
-    denominator = sum([outside_vectors[ind, :] * center_word_vec.transpose()  for ind in len(outside_vectors)])
-    ### END YOUR CODE
+    out_vec = outside_vectors[outside_word_idx, :]
+    dot_prod = np.dot(outside_vectors, center_word_vec)
+    v = outside_vectors.shape[0]
 
-    #return loss, grad_center_vec, grad_outside_vecs
+    y_hat = softmax(dot_prod)
+    y = np.zeros(v)
+    y[outside_word_idx] = 1
+
+    loss = - np.log(y_hat[outside_word_idx])
+    grad_center_vec = np.dot(outside_vectors.T, y_hat) - out_vec
+    grad_outside_vecs = np.outer(y_hat - y, center_word_vec)
+
+    return loss, grad_center_vec, grad_outside_vecs
 
 
 def neg_sampling_loss_and_gradient(
@@ -69,12 +76,13 @@ def neg_sampling_loss_and_gradient(
     # Negative sampling of words is done for you. Do not modify this if you
     # wish to match the autograder and receive points!
     neg_sample_word_indices = get_negative_samples(outside_word_idx, dataset, K)
-    indices = [outside_word_idx] + neg_sample_word_indices
+    indices = [outside_word_idx] + neg_sample_word_indices         # TODO - add repeating word addition
+    dot_prod = np.dot(outside_vectors[outside_word_idx], center_word_vec)
+    negative_dot_prod = np.dot(outside_vectors[neg_sample_word_indices], center_word_vec)
 
-    ### YOUR CODE HERE
-    # shorthands
-    raise NotImplementedError
-    ### END YOUR CODE
+    loss = -np.log(sigmoid(dot_prod)) - np.sum(np.log(sigmoid(-1 * negative_dot_prod)))
+    grad_center_vec = - center_word_vec * (1 - sigmoid(dot_prod))
+    grad_outside_vecs = np.dot(center_word_vec, sigmoid(negative_dot_prod))
 
     return loss, grad_center_vec, grad_outside_vecs
 
@@ -113,11 +121,17 @@ def skipgram(current_center_word, outside_words, word2ind,
     grad_center_vecs = np.zeros(center_word_vectors.shape)
     grad_outside_vectors = np.zeros(outside_vectors.shape)
 
-    ### YOUR CODE HERE
-    raise NotImplementedError
-    ### END YOUR CODE
+    c = word2ind[current_center_word]
+    out_vec = center_word_vectors[c, :]
+
+    for w in map(lambda p: word2ind[p], outside_words):
+        l, c_grad, o_grad = word2vec_loss_and_gradient(out_vec, w, outside_vectors, dataset)
+        loss += l
+        grad_outside_vectors += o_grad
+        grad_center_vecs[c, :] += c_grad
 
     return loss, grad_center_vecs, grad_outside_vectors
+
 
 #############################################
 # Testing functions below. DO NOT MODIFY!   #
