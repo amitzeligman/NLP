@@ -76,14 +76,29 @@ def neg_sampling_loss_and_gradient(
     # Negative sampling of words is done for you. Do not modify this if you
     # wish to match the autograder and receive points!
     neg_sample_word_indices = get_negative_samples(outside_word_idx, dataset, K)
-    indices = [outside_word_idx] + neg_sample_word_indices         # TODO - add repeating word addition
-    dot_prod = np.dot(outside_vectors[outside_word_idx], center_word_vec)
-    negative_dot_prod = np.dot(outside_vectors[neg_sample_word_indices], center_word_vec)
+    indices = [outside_word_idx] + neg_sample_word_indices
+
+    neg_indexes = list(set(neg_sample_word_indices))
+    counter = [0] * len(neg_indexes)
+    for i, idx in enumerate(neg_indexes):
+        counter[i] = neg_sample_word_indices.count(idx)
+
+    out_vec = outside_vectors[outside_word_idx]
+    negative_vecs = outside_vectors[neg_sample_word_indices]
+    dot_prod = np.dot(out_vec, center_word_vec)
+    negative_dot_prod = np.dot(negative_vecs, center_word_vec)
+    grad_outside_vecs = np.zeros_like(outside_vectors)
 
     loss = -np.log(sigmoid(dot_prod)) - np.sum(np.log(sigmoid(-1 * negative_dot_prod)))
-    grad_center_vec = - center_word_vec * (1 - sigmoid(dot_prod))
-    grad_outside_vecs = np.dot(center_word_vec, sigmoid(negative_dot_prod))
+    grad_center_vec = - out_vec * (1 - sigmoid(dot_prod)) + np.dot(negative_vecs.T, (1 - sigmoid(-1 * negative_dot_prod)))
 
+    grad_outside_vecs[outside_word_idx, :] = out_vec * (sigmoid(dot_prod) - 1)
+
+    negative_vecs = outside_vectors[neg_indexes]
+    negative_dot_prod = np.dot(negative_vecs, center_word_vec)
+
+    grad_outside_vecs[neg_indexes, :] = np.outer(1 - sigmoid(-1 * negative_dot_prod),  center_word_vec)
+    grad_outside_vecs[neg_indexes, :] = (grad_outside_vecs[neg_indexes, :].T * counter).T
     return loss, grad_center_vec, grad_outside_vecs
 
 
