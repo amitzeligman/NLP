@@ -92,13 +92,14 @@ def neg_sampling_loss_and_gradient(
     loss = -np.log(sigmoid(dot_prod)) - np.sum(np.log(sigmoid(-1 * negative_dot_prod)))
     grad_center_vec = - out_vec * (1 - sigmoid(dot_prod)) + np.dot(negative_vecs.T, (1 - sigmoid(-1 * negative_dot_prod)))
 
-    grad_outside_vecs[outside_word_idx, :] = out_vec * (sigmoid(dot_prod) - 1)
+    grad_outside_vecs[outside_word_idx, :] = center_word_vec * (sigmoid(dot_prod) - 1)
 
     negative_vecs = outside_vectors[neg_indexes]
     negative_dot_prod = np.dot(negative_vecs, center_word_vec)
 
     grad_outside_vecs[neg_indexes, :] = np.outer(1 - sigmoid(-1 * negative_dot_prod),  center_word_vec)
     grad_outside_vecs[neg_indexes, :] = (grad_outside_vecs[neg_indexes, :].T * counter).T
+
     return loss, grad_center_vec, grad_outside_vecs
 
 
