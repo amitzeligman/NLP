@@ -166,7 +166,7 @@ if __name__ == "__main__":
     # run SGD
     params = sgd(
             lambda vec: lm_wrapper(in_word_index, out_word_index, num_to_word_embedding, dimensions, vec),
-            params, LEARNING_RATE, NUM_OF_SGD_ITERATIONS, None, True, 10)  # TODO
+            params, LEARNING_RATE, NUM_OF_SGD_ITERATIONS, None, True, 1000)
 
     print(f"training took {time.time() - startTime} seconds")
 
