@@ -49,9 +49,10 @@ def gradcheck_naive(f, x, gradient_text=""):
 
         # Compare gradients
         assert_allclose(numgrad, grad[ix], rtol=1e-5,
-                        err_msg=r"Gradient check failed for {gradient_text}.\n"
-                                r"First gradient error found at index {ix} in the vector of gradients\n"
-                                r"Your gradient: {grad[ix]} \t Numerical gradient: {numgrad}")
+
+                        err_msg=f"Gradient check failed for {gradient_text}.\n"
+                                f"First gradient error found at index {ix} in the vector of gradients\n"
+                                f"Your gradient: {grad[ix]} \t Numerical gradient: {numgrad}")
 
         it.iternext()  # Step to next dimension
 
