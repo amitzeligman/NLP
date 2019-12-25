@@ -45,14 +45,16 @@ def most_frequent_eval(test_set, pred_tags):
 
     return evaluate_ner(gold_tag_seqs, pred_tag_seqs)
 
-
 if __name__ == "__main__":
 
+    os.chdir('/Users/amitzeligman/Git/NLP/ex_3')  # TODO
     train_sents = read_conll_ner_file("data/train.conll")
     dev_sents = read_conll_ner_file("data/dev.conll")
     vocab = compute_vocab_count(train_sents)
     train_sents = preprocess_sent(vocab, train_sents)
     dev_sents = preprocess_sent(vocab, dev_sents)
+
+    os.chdir('/Users/amitzeligman/Git/NLP/ex_3/q1-4')  # TODO
 
     model = most_frequent_train(train_sents)
     most_frequent_eval(dev_sents, model)

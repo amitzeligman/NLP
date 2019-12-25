@@ -345,6 +345,11 @@ def replace_word(word):
     """
     ### YOUR CODE HERE
 
+    #for i in range(len(rare_words_transformation_rules)):
+    #    if rare_words_transformation_rules[i][1](word):
+    #        return rare_words_transformation_rules[0]
+
+
     def all_numbers(word_):
         word_ = list(word_)
         if all(map(lambda p: p.isdigit(), word_)):
