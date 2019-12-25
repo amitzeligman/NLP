@@ -97,8 +97,15 @@ def hmm_viterbi(sent, total_tokens, q_tri_counts, q_bi_counts, q_uni_counts,
     ### YOUR CODE HERE
 
     n = len(sent)
-    possible_tags = [key for key in e_tag_counts]
-    #possible_tags += '*'   #TODO
+
+    # Tag pruning
+    thresh = 1e-2
+    possible_tags = [tag for tag in e_tag_counts.keys()]
+    possible_tags_pairs = []
+    for tag1 in possible_tags:
+        for tag2 in possible_tags:
+            if (tag1, tag2) in q_bi_counts.keys() and q_bi_counts[(tag1, tag2)] > thresh:
+                possible_tags_pairs.append((tag1, tag2))
 
     def transmission_prob(tag, prev_tag, prev_prev_tag):
         tri = q_tri_counts[(tag, prev_tag, prev_prev_tag)] if (tag, prev_tag, prev_prev_tag) in q_tri_counts.keys() else 0
@@ -110,26 +117,18 @@ def hmm_viterbi(sent, total_tokens, q_tri_counts, q_bi_counts, q_uni_counts,
     def find_max(word, k, u, v, pai_prev):
         max_ = 0
         argmax_ = 'O'
-        #if not  (word, v) in e_word_tag_counts.keys(): print(word, v)
         emission = e_word_tag_counts[(word, v)] if (word, v) in e_word_tag_counts.keys() else 0
-        if not k:
+        if k == 0 or k == 1:
             pai_new = (pai_prev[('*', u)] if k else 1) * transmission_prob(v, '*', u) * emission
             return pai_new, '*'
-        #if k == 1:
-        #    for w in possible_tags:
-        #        pai_new = (pai_prev[(w, '*')] if k else 1) * transmission_prob(v, w, '*') * emission
-        #        if pai_new > max_:
-        #            max_ = pai_new
-        #            argmax_ = w
-        #    return max_, argmax_
 
-        else:
-            for w in possible_tags:
+        for w in possible_tags:
+            if (u, w) in possible_tags_pairs:
                 pai_new = (pai_prev[(w, u)] if k else 1) * transmission_prob(v, w, u) * emission
                 if pai_new > max_:
                     max_ = pai_new
                     argmax_ = w
-            return max_, argmax_
+        return max_, argmax_
 
     pai = [] * n
     bp = [] * n
@@ -140,33 +139,28 @@ def hmm_viterbi(sent, total_tokens, q_tri_counts, q_bi_counts, q_uni_counts,
         if not k:
             for v in possible_tags:
                 pai_k[('*', v)], bp_k[('*', v)] = find_max(word, k, '*', v, pai[k-1] if k else 1)
+                for u in possible_tags:
+                    if (v, u) in possible_tags_pairs:
+                        pai_k[(u, v)], bp_k[(u, v)] = 0, '*'
 
-        elif k == 1:
-            for u in possible_tags:
-                pai_k[(u, '*')], bp_k[(u, '*')] = find_max(word, k, u, '*', pai[k-1] if k else 1)
-
-        elif k == n-1:
-            for u in possible_tags:
-                pai_k[(u, 'STOP')], bp_k[(u, 'STOP')] = find_max(word, k, u, 'STOP', pai[k - 1] if k else 1)
         else:
-            for u in possible_tags:
-                for v in possible_tags:
-                    pai_k[(u, v)], bp_k[(u, v)] = find_max(word, k, u, v, pai[k-1] if k else 1)
+            for v, u in possible_tags_pairs:
+                pai_k[(u, v)], bp_k[(u, v)] = find_max(word, k, u, v, pai[k-1] if k else 1)
         pai.append(pai_k)
         bp.append(bp_k)
 
+    # Backward calculation of tags
     argmax = ('O', 'O')
     max_ = 0
-    for v in [key for key in e_tag_counts]:
-        for u in [key for key in e_tag_counts]:
-            if pai[n - 1][(u, v)] * transmission_prob('STOP', u, v) > max_:
-                max_ = pai[n - 1][(u, v)] * transmission_prob('STOP', u, v)
-                argmax = (u, v)
+    for v, u in possible_tags_pairs:
+        if pai[n - 1][(u, v)] * transmission_prob('STOP', u, v) > max_:
+            max_ = pai[n - 1][(u, v)] * transmission_prob('STOP', u, v)
+            argmax = (u, v)
 
     predicted_tags[-2:] = argmax
 
-    for k in reversed(range(n - 1)):
-        predicted_tags[k] = bp[k+1][predicted_tags[k], predicted_tags[k+1]]
+    for k in reversed(range(n - 2)):
+        predicted_tags[k] = bp[k+2][predicted_tags[k+1], predicted_tags[k+2]]
 
     ### YOUR CODE HERE
     return predicted_tags
@@ -192,15 +186,12 @@ def hmm_eval(test_data, total_tokens, q_tri_counts, q_bi_counts, q_uni_counts, e
 
     return evaluate_ner(gold_tag_seqs, pred_tag_seqs)
 
+
 if __name__ == "__main__":
     start_time = time.time()
-    os.chdir('/Users/amitzeligman/Git/NLP/ex_3')  # TODO
     train_sents = read_conll_ner_file("data/train.conll")
     dev_sents = read_conll_ner_file("data/dev.conll")
     vocab = compute_vocab_count(train_sents)
-
-    os.chdir('/Users/amitzeligman/Git/NLP/ex_3/q1-4')  # TODO
-
     train_sents = preprocess_sent(vocab, train_sents)
     dev_sents = preprocess_sent(vocab, dev_sents)
 

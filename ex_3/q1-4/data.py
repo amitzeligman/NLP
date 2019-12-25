@@ -349,13 +349,9 @@ def replace_word(word):
     #    if rare_words_transformation_rules[i][1](word):
     #        return rare_words_transformation_rules[0]
 
-
     def all_numbers(word_):
         word_ = list(word_)
-        if all(map(lambda p: p.isdigit(), word_)):
-            return True
-        else:
-            return False
+        return all(map(lambda p: p.isdigit(), word_))
 
     # All numbers cases
     if all_numbers(word):
