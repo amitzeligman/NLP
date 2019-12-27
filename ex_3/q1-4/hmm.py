@@ -107,12 +107,12 @@ def hmm_viterbi(sent, total_tokens, q_tri_counts, q_bi_counts, q_uni_counts,
             if (tag1, tag2) in q_bi_counts.keys() and q_bi_counts[(tag1, tag2)] > thresh:
                 possible_tags_pairs.append((tag1, tag2))
 
-    def transmission_prob(tag, prev_tag, prev_prev_tag):
-        tri = q_tri_counts[(tag, prev_tag, prev_prev_tag)] if (tag, prev_tag, prev_prev_tag) in q_tri_counts.keys() else 0
+    def transmission_prob(tag, prev_prev_tag, prev_tag):
+        tri = q_tri_counts[(tag, prev_prev_tag, prev_tag)] if (tag, prev_prev_tag, prev_tag) in q_tri_counts.keys() else 0
         bi = q_bi_counts[(tag, prev_tag)] if (tag, prev_tag) in q_bi_counts.keys() else 0
         uni = q_uni_counts[tag] if tag in q_uni_counts.keys() else 0
 
-        return lambda1 * tri + lambda2 * bi * (1 - lambda1 - lambda2) * uni
+        return lambda1 * tri + lambda2 * bi + (1 - lambda1 - lambda2) * uni
 
     def find_max(word, k, u, v, pai_prev):
         max_ = 0
@@ -181,7 +181,6 @@ def hmm_eval(test_data, total_tokens, q_tri_counts, q_bi_counts, q_uni_counts, e
         ### YOUR CODE HERE
         pred_tag_seqs.append(hmm_viterbi(words, total_tokens, q_tri_counts, q_bi_counts, q_uni_counts, e_word_tag_counts,
                                          e_tag_counts, 0.4, 0.4))
-
         ### YOUR CODE HERE
 
     return evaluate_ner(gold_tag_seqs, pred_tag_seqs)
