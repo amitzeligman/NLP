@@ -81,7 +81,13 @@ class NerBiLstmModel(torch.nn.Module):
 
         self._dropout = torch.nn.Dropout(config.dropout)
         ### YOUR CODE HERE (3 lines)
-        raise NotImplementedError
+
+        self._embedding = torch.nn.Embedding(pretrained_embeddings.shape[0], config.embed_size, _weight=pretrained_embeddings)
+
+        self._bilstm = torch.nn.LSTM(input_size=int(config.n_features * config.embed_size),
+                                     hidden_size=int(config.hidden_size / 2), bidirectional=True, batch_first=True)
+        self._linear = torch.nn.Linear(in_features=config.hidden_size, out_features=config.n_classes)
+
         ### YOUR CODE HERE
 
     def forward(self, sentences):
@@ -108,7 +114,14 @@ class NerBiLstmModel(torch.nn.Module):
         """
         batch_size, seq_length = sentences.shape[0], sentences.shape[1]
         ### YOUR CODE HERE (5-9 lines)
-        raise NotImplementedError
+        e = self._embedding(sentences)
+        e = e.view((batch_size, seq_length, -1))
+        e = self._dropout(e)
+        h = self._bilstm(e)[0]
+        h = self._dropout(h)
+        y = self._linear(h)
+        tag_probs = torch.softmax(y, dim=-1)
+
         ### YOUR CODE HERE
         return tag_probs
 
@@ -125,7 +138,7 @@ class Trainer(TrainerBase):
         super(Trainer, self).__init__(model, config, helper, logger)
 
         ### YOUR CODE HERE (1 line)
-        raise NotImplementedError
+        self._loss_function = lambda x, y: -torch.mean(y * torch.log(x))
         ### YOUR CODE HERE
         self._optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
 
@@ -161,7 +174,10 @@ class Trainer(TrainerBase):
             loss: A 0-d tensor (scalar)
         """
         ### YOUR CODE HERE (3-6 lines)
-        raise NotImplementedError
+        masked_tag_probs = tag_probs[masks]
+        masked_labels = labels[masks]
+        masked_tag_probs = torch.gather(masked_tag_probs, -1, masked_labels.unsqueeze(-1))
+
         ### YOUR CODE HERE
         loss = self._loss_function(masked_tag_probs, masked_labels)
         return loss
@@ -210,8 +226,14 @@ class DataPreprocessor(BaseDataPreprocessor):
         zero_label = 4 # corresponds to the 'O' tag
 
         for sentence, labels in examples:
+
             ### YOUR CODE HERE (~5 lines)
-            raise NotImplementedError
+            sentence, labels = list(map(lambda p: p[:min(max_length, len(p))], [sentence, labels]))
+            T = len(sentence)
+            new_sentence = sentence + [zero_vector] * (max_length - T)
+            new_labels = labels + [zero_label] * (max_length - T)
+            mask = [True] * T + [False] * (max_length - T)
+            ret.append((new_sentence, new_labels, mask))
             ### YOUR CODE HERE
         return ret
 
@@ -382,11 +404,11 @@ def do_training_test(args):
     logger.info("Model did not crash!")
     logger.info("Passed!")
 
-def main(arguments_str):  
+def main(arguments_str):
     args = sys.argv[1:]
     if arguments_str:
         args = arguments_str.split()
-    
+
     parser = argparse.ArgumentParser(description='Trains and tests an NER model')
     subparsers = parser.add_subparsers()
 
