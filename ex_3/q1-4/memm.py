@@ -14,7 +14,7 @@ def build_extra_decoding_arguments(train_sents):
 
     extra_decoding_arguments = {}
     ### YOUR CODE HERE
-    raise NotImplementedError
+    #raise NotImplementedError
     ### YOUR CODE HERE
 
     return extra_decoding_arguments
@@ -28,7 +28,11 @@ def extract_features_base(curr_word, next_word, prev_word, prevprev_word, prev_t
     features = {}
     features['word'] = curr_word
     ### YOUR CODE HERE
-    raise NotImplementedError
+    features['next_word'] = next_word
+    features['prev_word'] = prev_word
+    features['prevprev_word'] = prevprev_word
+    features['prev_tag'] = prev_tag
+    features['prevprev_prev_tag'] = prevprev_tag + ' ' +prev_tag
     ### YOUR CODE HERE
     return features
 
@@ -72,7 +76,21 @@ def memm_greedy(sent, logreg, vec, index_to_tag_dict, extra_decoding_arguments):
     """
     predicted_tags = ["O"] * (len(sent))
     ### YOUR CODE HERE
-    raise NotImplementedError
+
+    n = len(sent)
+    for k, word in enumerate(sent):
+        curr_word = sent[k][0]
+        prev_word = sent[k - 1][0] if k > 0 else '<st>'
+        prevprev_word = sent[k - 2][0] if k > 1 else '<st>'
+        prev_tag = predicted_tags[k - 1] if k > 0 else '*'
+        prevprev_tag = predicted_tags[k - 2] if k > 1 else '*'
+        next_word = sent[k + 1][0] if k < (len(sent) - 1) else '</s>'
+
+        features = extract_features_base(curr_word, next_word, prev_word, prevprev_word, prev_tag, prevprev_tag)
+        features_vectorized = vec.transform(features)
+
+        approx_tag = logreg.predict(features_vectorized)
+        predicted_tags[k] = index_to_tag_dict[approx_tag[0]]
     ### YOUR CODE HERE
     return predicted_tags
 
@@ -83,7 +101,78 @@ def memm_viterbi(sent, logreg, vec, index_to_tag_dict, extra_decoding_arguments)
     """
     predicted_tags = ["O"] * (len(sent))
     ### YOUR CODE HERE
-    raise NotImplementedError
+    n = len(sent)
+
+    # Tag pruning
+    thresh = 1e-2
+    possible_tags = [tag for tag in index_to_tag_dict.values()]
+    possible_tags = possible_tags[:-1]
+    possible_tags_pairs = []
+    for tag1 in possible_tags:
+        for tag2 in possible_tags:
+            possible_tags_pairs.append((tag1, tag2))
+
+    def log_lin_model(tag, prev_prev_tag, prev_tag, log_reg, curr_word, prev_word, prevprev_word, next_word, vec):
+        features = extract_features_base(curr_word, next_word, prev_word, prevprev_word, prev_tag, prev_prev_tag)
+        features_vectorized = vec.transform(features)
+
+        probs = log_reg.predict_proba(features_vectorized)
+
+
+
+        return probs[0][tag_to_idx_dict[tag]]
+
+    def find_max(curr_word, k, u, v, pai_prev, prev_word, prevprev_word, next_word, vec):
+        max_ = 0
+        argmax_ = 'O'
+
+        if k == 0 or k == 1:
+            pai_new = (pai_prev[('*', u)] if k else 1) * log_lin_model(v, '*', u, logreg, curr_word, prev_word, prevprev_word, next_word, vec)
+            return pai_new, '*'
+
+        for w in possible_tags:
+            if (u, w) in possible_tags_pairs:
+                pai_new = (pai_prev[(w, u)] if k else 1) * log_lin_model(v, w, u, logreg, curr_word, prev_word, prevprev_word, next_word, vec)
+                if pai_new > max_:
+                    max_ = pai_new
+                    argmax_ = w
+        return max_, argmax_
+
+    pai = [] * n
+    bp = [] * n
+    for k, word in enumerate(sent):
+        pai_k = dict()
+        bp_k = dict()
+        prev_word = sent[k - 1][0] if k > 0 else '<st>'
+        prevprev_word = sent[k - 2][0] if k > 1 else '<st>'
+        next_word = sent[k + 1][0] if k < (len(sent) - 1) else '</s>'
+        if not k:
+            for v in possible_tags:
+                pai_k[('*', v)], bp_k[('*', v)] = find_max(word, k, '*', v, pai[k - 1] if k else 1, prev_word, prevprev_word, next_word, vec)
+                for u in possible_tags:
+                    if (v, u) in possible_tags_pairs:
+                        pai_k[(u, v)], bp_k[(u, v)] = 0, '*'
+
+        else:
+            for v, u in possible_tags_pairs:
+                pai_k[(u, v)], bp_k[(u, v)] = find_max(word, k, u, v, pai[k - 1] if k else 1, prev_word, prevprev_word, next_word, vec)
+        pai.append(pai_k)
+        bp.append(bp_k)
+
+    # Backward calculation of tags
+    argmax = ('O', 'O')
+    max_ = 0
+    for v, u in possible_tags_pairs:
+
+        if pai[n - 1][(u, v)]> max_:
+            max_ = pai[n - 1][(u, v)]
+            argmax = (u, v)
+
+    predicted_tags[-2:] = argmax
+
+    for k in reversed(range(n - 2)):
+        predicted_tags[k] = bp[k + 2][predicted_tags[k + 1], predicted_tags[k + 2]]
+
     ### YOUR CODE HERE
     return predicted_tags
 
@@ -115,7 +204,8 @@ def memm_eval(test_data, logreg, vec, index_to_tag_dict, extra_decoding_argument
         gold_tag_seqs.append(true_tags)
 
         ### YOUR CODE HERE
-        raise NotImplementedError
+        greedy_pred_tag_seqs.append(memm_greedy(sent, logreg, vec, index_to_tag_dict, extra_decoding_arguments))
+        viterbi_pred_tag_seqs.append(memm_viterbi(sent, logreg, vec, index_to_tag_dict, extra_decoding_arguments))
         ### YOUR CODE HERE
 
     greedy_evaluation = evaluate_ner(gold_tag_seqs, greedy_pred_tag_seqs)
