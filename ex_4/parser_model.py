@@ -71,7 +71,12 @@ class ParserModel(nn.Module):
         ###     Xavier Init: https://pytorch.org/docs/stable/nn.html#torch.nn.init.xavier_uniform_
         ###     Dropout: https://pytorch.org/docs/stable/nn.html#torch.nn.Dropout
         ### YOUR CODE HERE (~5 Lines)
-        raise NotImplementedError
+
+        self.embed_to_hidden = nn.Linear(self.embed_size * self.n_features, self.hidden_size)
+        torch.nn.init.xavier_uniform(self.embed_to_hidden.weight)
+        self.dropout = nn.Dropout(self.dropout_prob)
+        self.hidden_to_logits = nn.Linear(self.hidden_size, self.n_classes)
+        torch.nn.init.xavier_uniform(self.hidden_to_logits.weight)
         ### END YOUR CODE
 
     def embedding_lookup(self, t):
@@ -102,7 +107,10 @@ class ParserModel(nn.Module):
         ###     Embedding Layer: https://pytorch.org/docs/stable/nn.html#torch.nn.Embedding
         ###     View: https://pytorch.org/docs/stable/tensors.html#torch.Tensor.view
         ### YOUR CODE HERE (~1-3 Lines)
-        raise NotImplementedError
+
+        x = self.pretrained_embeddings(t)
+        x = x.view(-1, self.n_features * self.embed_size)
+
         ### END YOUR CODE
         return x
 
@@ -139,6 +147,9 @@ class ParserModel(nn.Module):
         ### Please see the following docs for support:
         ###     ReLU: https://pytorch.org/docs/stable/nn.html?highlight=relu#torch.nn.functional.relu
         ### YOUR CODE HERE (~3-5 lines)
-        raise NotImplementedError
+        x = self.embedding_lookup(t)
+        h = F.relu(self.embed_to_hidden(x))
+        h = self.dropout(h)
+        logits = self.hidden_to_logits(h)
         ### END YOUR CODE
         return logits
