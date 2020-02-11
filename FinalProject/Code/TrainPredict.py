@@ -41,6 +41,7 @@ enc_dummy = enc_dummy.to(device)
 # Training
 loss_fct = nn.CrossEntropyLoss(ignore_index=-1)
 classifier.requires_grad_(False)  # Freeze classifier
+#enc.requires_grad_(False)
 optimizer = Adam(params=enc_dummy.parameters(), lr=config.lr)
 
 classifier.train()
@@ -48,12 +49,13 @@ enc_dummy.train()
 
 for epoch in range(config.epochs):
     enc_dummy.zero_grad()
-    features = enc_dummy(tokens_tensor)[0]
+    #features = enc_dummy(tokens_tensor)
+    features, _ = enc(tokens_tensor, segments_tensors, attention_mask=None, output_all_encoded_layers=False)
     predictions_scores = classifier(features)
     masked_lm_loss = loss_fct(predictions_scores.view(-1, config.vocab_size), labels.view(-1))
     print('{}/{}'.format(epoch, config.epochs), 'Loss:', masked_lm_loss.item())
-    masked_lm_loss.backward()
-    optimizer.step()
+    #masked_lm_loss.backward()
+    #optimizer.step()
 
 
 # Predict
@@ -61,8 +63,9 @@ enc_dummy.eval()
 classifier.eval()
 
 with torch.no_grad():
-    features = enc_dummy(tokens_tensor)
-    predictions = classifier(features[0])
+    features, _ = enc(tokens_tensor, segments_tensors, attention_mask=None, output_all_encoded_layers=False)
+    #features = enc_dummy(tokens_tensor)
+    predictions = classifier(features)
 
     predicted_tokens = list(map(lambda p: tokenizer.convert_ids_to_tokens(p), [torch.argmax(predictions, -1)[0].numpy()]))
     print(predicted_tokens)
