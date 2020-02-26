@@ -1,7 +1,21 @@
-import torch, torchvision
+import torch
+import torchvision
 import pandas as pd
 import os
 import glob
+import torch.utils.data as data
+
+def collate_fn(batch):
+    videos_batch = []
+    subs_batch = ''
+    for i, item in enumerate(batch):
+        videos_batch.append(item['video'])
+        subs_batch += '<Start>' + item['subtitle']['Text']
+    videos_batch = torch.cat(videos_batch, dim=0)
+
+    return videos_batch, subs_batch
+
+
 
 class VGGDataset(torch.utils.data.Dataset):
     def __init__(self, root_dir, transform=None):
@@ -24,6 +38,9 @@ class VGGDataset(torch.utils.data.Dataset):
         video = video_obj[0]
         video_metadata = video_obj[2]
         subtitle = self.read_txt(subtitle_path)
+
+        if self.transform:
+            video = self.transform(video)
 
         sample = {'video': video, 'video_md': video_metadata, 'subtitle': subtitle}
 
