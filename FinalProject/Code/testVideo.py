@@ -4,9 +4,10 @@ import torch
 import torchvision
 from torchvision.transforms.functional import to_tensor
 
-img = cv2.imread('/Users/amitzeligman/Desktop/1.png')
-img = to_tensor(img)
-img = img.unsqueeze(0).unsqueeze(0)
+img = cv2.imread('/Users/amitzeligman/Desktop/Screen Shot 2020-02-04 at 13.44.25.png')
+#img = torch.from_numpy(img)
+img = torch.tensor(img)
+img = img.permute(-1, 0, 1).unsqueeze(0).unsqueeze(0)
 img = torch.cat([img, img], dim=1)
 
 model = VGG_LSTM(hidden_size=768, n_layers=8, dropt=0.25, bi=True)

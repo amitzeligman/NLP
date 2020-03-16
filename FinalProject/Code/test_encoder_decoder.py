@@ -1,7 +1,9 @@
 import torch
 import transformers
 import math
-
+from torch.nn import CrossEntropyLoss
+import logging
+logging.basicConfig(level=logging.INFO)
 
 
 def beam_search_decoder(data, k):
@@ -26,36 +28,77 @@ def beam_search_decoder(data, k):
 #tokenizer = transformers.BertTokenizer.from_pretrained('bert-base-uncased')
 #model = transformers.Model2Model.from_pretrained('bert-base-uncased')
 
-tokenizer = transformers.XLMTokenizer.from_pretrained('xlm-mlm-en-2048')
+#tokenizer = transformers.XLMTokenizer.from_pretrained('xlm-mlm-en-2048')
+#tokenizer = transformers.XLMTokenizer.from_pretrained('bert-base-uncased')
 tokenizer_bert = transformers.BertTokenizer.from_pretrained('bert-base-uncased')
-model = transformers.PreTrainedEncoderDecoder.from_pretrained('xlm-mlm-en-2048', 'bert-base-uncased')
+tokenizer = tokenizer_bert
+config = transformers.BertConfig.from_pretrained('bert-base-uncased')
+config.is_decoder = True
+decoder = transformers.BertForMaskedLM(config)
+#model = transformers.PreTrainedEncoderDecoder.from_pretrained('xlm-mlm-en-2048', 'bert-base-uncased')
+model = transformers.Model2Model.from_pretrained('bert-base-uncased', decoder_model=decoder)
 
 # TODO try over fitting on single sentence LM
 
-inputs = "I like cats and dogs"
-outputs = ""
+encoder_inputs = "I like cats and dogs"
+decoder_inputs = "I like cats and dogs"
 model_kwargs = {}
-encoder_input_ids = tokenizer.encode(inputs)
+encoder_input_ids = tokenizer.encode(encoder_inputs)
 encoder_input_ids = torch.tensor(encoder_input_ids).unsqueeze_(0)
-decoder_input_ids = tokenizer_bert.encode(outputs)
+decoder_input_ids = tokenizer_bert.encode(decoder_inputs)
 decoder_input_ids = torch.tensor(decoder_input_ids).unsqueeze_(0)
 
 
-out = model(encoder_input_ids=encoder_input_ids, decoder_input_ids=decoder_input_ids)
+optimizer = torch.optim.Adam(params=model.parameters(), lr=1e-4)
+loss_fct = CrossEntropyLoss()
+model.train()
 
-logits = torch.nn.Softmax(-1)(out[0].squeeze(0))
+#model.load_state_dict(torch.load('/Users/amitzeligman/NLP_models/test.pt'))
+
+#encoder_attention_mask = torch.ones_like(encoder_input_ids)
+#decoder_attention_mask = 1#torch.ones_like(encoder_input_ids)
+
+for i in range(100):
+    optimizer.zero_grad()
+    loss = 0
+
+    for l in range(decoder_input_ids.shape[-1] - 1):
+
+        outputs = model(encoder_input_ids=encoder_input_ids, decoder_input_ids=decoder_input_ids[:, :l+1].view(1, -1))
+        loss += loss_fct(outputs[0].view(l+1, -1), decoder_input_ids[:, 1:l+2].view(-1)) / (l + 1)
+
+    print(loss.item())
+    loss.backward()
+    optimizer.step()
+
+#torch.save(model.state_dict(), '/Users/amitzeligman/NLP_models/test.pt')
+
+# Predicting
+
+model.eval()
+#decoder_input_ids = tokenizer_bert.encode("[CLS]")
+#decoder_input_ids = torch.tensor(decoder_input_ids).unsqueeze_(0)
 
 
-pred = beam_search_decoder(logits.detach().numpy(), 1)
+for l in range(decoder_input_ids.shape[-1]):
+    outputs = model(encoder_input_ids=encoder_input_ids, decoder_input_ids=decoder_input_ids[:, :l+1].view(1, -1))
+    pred = torch.argmax(outputs[0], -1).view(-1, 1)
+
+    if tokenizer.decode(pred[-1]) == '[SEP]':
+        break
+
+    #decoder_input_ids = torch.cat([decoder_input_ids, pred[..., -1].unsqueeze(-1)], dim=-1)
+
+    #logits = torch.nn.Softmax(-1)(outputs[0].squeeze(0))
+    #pred = beam_search_decoder(logits.detach().numpy(), 1)
+    #predicted_tokens = list(map(lambda p: tokenizer_bert.decode(p), pred[0][0]))
+    predicted_tokens = tokenizer_bert.decode(pred)
+
+    print(predicted_tokens)
 
 
-predicted_tokens = list(map(lambda p: tokenizer.decode(p), pred[0][0]))
+
 #predicted_tokens = list(map(lambda p: tokenizer.decode(p), [torch.argmax(out[0], -1)[0].numpy()]))
-print(predicted_tokens)
 
 
 
-
-#generated_ids = model.decode(encoder_input_ids, length=6, temperature=1.3, k=9, p=0.9, repetition_penalty=1.4, **model_kwargs)
-#generated_txt = tokenizer.decode(generated_ids)
-#print(generated_txt)
