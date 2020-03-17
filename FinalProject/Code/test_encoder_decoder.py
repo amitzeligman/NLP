@@ -19,7 +19,7 @@ def beam_search_decoder(data, k):
                 candidate = [seq + [j], score * -math.log(row[j])]
                 all_candidates.append(candidate)
         # order all candidates by score
-        ordered = sorted(all_candidates, key=lambda tup: tup[1])
+        ordered = sorted(all_candidates, key=lambda tup: tup[2])
         # select k best
         sequences = ordered[:k]
     return sequences
@@ -38,7 +38,6 @@ decoder = transformers.BertForMaskedLM(config)
 #model = transformers.PreTrainedEncoderDecoder.from_pretrained('xlm-mlm-en-2048', 'bert-base-uncased')
 model = transformers.Model2Model.from_pretrained('bert-base-uncased', decoder_model=decoder)
 
-# TODO try over fitting on single sentence LM
 
 encoder_inputs = "I like cats and dogs"
 decoder_inputs = "I like cats and dogs"
