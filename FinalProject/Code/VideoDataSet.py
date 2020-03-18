@@ -1,10 +1,20 @@
 import torch
-import torch.utils.data
-import torch.nn as nn
 import torchvision
 import pandas as pd
 import os
 import glob
+import torch.utils.data as data
+
+def collate_fn(batch):
+    videos_batch = []
+    subs_batch = ''
+    for i, item in enumerate(batch):
+        videos_batch.append(item['video'])
+        subs_batch += item['subtitle']['Text'] #'<Start>' + item['subtitle']['Text']
+    videos_batch = torch.cat(videos_batch, dim=0)
+
+    return videos_batch, subs_batch
+
 
 
 class VGGDataset(torch.utils.data.Dataset):
@@ -29,9 +39,13 @@ class VGGDataset(torch.utils.data.Dataset):
         video_metadata = video_obj[2]
         subtitle = self.read_txt(subtitle_path)
 
+        if self.transform:
+            video = self.transform(video)
+
         sample = {'video': video, 'video_md': video_metadata, 'subtitle': subtitle}
 
         return sample
+
 
     def read_txt(self, sub_file):
         y = {}
@@ -45,7 +59,7 @@ class VGGDataset(torch.utils.data.Dataset):
     def get_videos_and_subtitles(self, data_path):
         mp4_list = []
         txt_list = []
-        all_dirs = os.listdir(data_path)
+        all_dirs = os.listdir('/media/cs-dl/HD_6TB/Data/Amit/trainval')
 
         for dir in all_dirs:
             mp4_in_dir = glob.glob('{}/{}/*.mp4'.format(data_path, dir))
@@ -56,6 +70,5 @@ class VGGDataset(torch.utils.data.Dataset):
 
         return [mp4_list, txt_list]
 
-
-vid = VGGDataset(os.path.abspath(os.path.join(os.getcwd(), os.pardir)), 'data')
+vid = VGGDataset('/media/cs-dl/HD_6TB/Data/Amit/trainval')
 vid[0]
