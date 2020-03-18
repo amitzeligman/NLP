@@ -7,9 +7,18 @@ from torch.nn import CrossEntropyLoss
 import logging
 #logging.basicConfig(level=logging.INFO)
 
+
+# TODO - algorithmic:
+#  1. Teacher forcing True/False in training.
+#  2. Beam search in prediction.
+#  3. Embedding loss for video embeddings.
+#  4. Design video embeddings - Last hidden state or outputs of LSTM?, frames per id rate?.
+#  5. Check cross-attention mechanism.
+
+
 device = ('cuda' if torch.cuda.is_available() else 'cpu')
 
-
+# Nlp model definitions
 tokenizer = transformers.BertTokenizer.from_pretrained('bert-base-uncased')
 config = transformers.BertConfig.from_pretrained('bert-base-uncased')
 config.is_decoder = True
@@ -19,27 +28,38 @@ nlp_model.encoder.embeddings = IdentityEmbedding('input_ids')
 nlp_model.to(device)
 nlp_model.train()
 
+# Video model definitions
 vid_model = VGG_LSTM(hidden_size=768, n_layers=8, dropt=0.25, bi=True)
 vid_model.train()
 vid_model = vid_model.to(device)
 frames_per_inference = 5
 
-
+# Over fit nlp sentence to train
 decoder_inputs = "SO THE TECHNOLOGY IS THERE"
 decoder_input_ids = tokenizer.encode(decoder_inputs)
 decoder_input_ids = torch.tensor(decoder_input_ids).unsqueeze_(0)
 
+# Optimizers and loss function
 optimizer_nlp = torch.optim.Adam(params=nlp_model.parameters(), lr=1e-4)
 optimizer_vid = torch.optim.Adam(params=vid_model.parameters(), lr=1e-4)
 loss_fct = CrossEntropyLoss()
 
+# load models
 vid_model.load_state_dict(torch.load('/media/cs-dl/HD_6TB/Data/Trained_models_nlp/vid_model.py'))
 nlp_model.load_state_dict(torch.load('/media/cs-dl/HD_6TB/Data/Trained_models_nlp/nlp_model.py'))
 
-
 epochs = 5
 
+# Training
+
 for _ in range(epochs):
+
+    optimizer_nlp.zero_grad()
+    optimizer_vid.zero_grad()
+    loss = 0
+
+    # Video embedding
+
     cap = cv2.VideoCapture('/media/cs-dl/HD_6TB/Data/Amit/trainval/0af00UcTOSc/50002.mp4')
 
     idx = 0
@@ -72,13 +92,9 @@ for _ in range(epochs):
 
     cap.release()
 
-
+# Nlp prediction form video embeddings
     encoder_attention_mask = torch.ones(out.shape[:-1], device=device)
     decoder_input_ids = decoder_input_ids.to(device)
-
-    optimizer_nlp.zero_grad()
-    optimizer_vid.zero_grad()
-    loss = 0
 
     for l in range(decoder_input_ids.shape[-1] - 1):
 
