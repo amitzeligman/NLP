@@ -28,12 +28,12 @@ class VGGLSTM(nn.Module):
         self.hidden_size = hidden_size
         self.num_layers = n_layers
 
-        dim_feats = 4096
+        self.features_dim = 4096
 
         self.cnn = models.vgg19(pretrained=True)
         self.cnn.classifier[-1] = Identity()
         self.rnn = nn.LSTM(
-            input_size=dim_feats,
+            input_size=self.features_dim ,
             hidden_size=self.hidden_size,
             num_layers=self.num_layers,
             dropout=dropt,
@@ -46,22 +46,37 @@ class VGGLSTM(nn.Module):
         for param in self.cnn.parameters():
             param.requires_grad = False
 
+        self.frames_per_token = 10
+
     def forward(self, x):
-        batch_size, timesteps, C, H, W = x.size()
-        c_in = x.view(batch_size * timesteps, C, H, W)
+        batch_size, time_steps, C, H, W = x.size()
+        assert batch_size == 1, 'Currently only batch_size=1 is supported'
+        c_in = x.view(batch_size * time_steps, C, H, W)
 
+        # Extract features per each frame independently.
         c_out = self.cnn(c_in)
+        out = self.rnn(c_out.view(-1, batch_size, self.features_dim))[0]
+        out = out.view(time_steps, batch_size, self.hidden_size, 2)
+        out = self.fc(out).view(batch_size, time_steps, self.hidden_size)
 
-        out = self.rnn(c_out.view(-1, batch_size, 4096))
 
-        hidden = out[1][0]
-        last_hidden = hidden[-2:, ...].view(batch_size, self.hidden_size, 2)
-        # TODO - check indeed this indices return the desired hidden state.
-        if self.bidirectional:
-            last_hidden = self.fc(out[0].view(timesteps, self.hidden_size, 2)).view(1, timesteps, self.hidden_size)
-            #last_hidden = self.fc(last_hidden).view(batch_size, 1, self.hidden_size) # TODO
+        # ADD DESCRIPTION
+        #final_output = None
+        #for i in range(time_steps // self.frames_per_token + 1 * (time_steps % self.frames_per_token is True)):
+        #    current_time_steps = self.frames_per_token if i <= time_steps // self.frames_per_token else time_steps % self.frames_per_token
+        #    c = c_out[i * self.frames_per_token: (i + 1) * current_time_steps]
+        #    out = self.rnn(c.view(-1, batch_size, self.features_dim))
+        #    hidden = out[1][0]
+        #    last_hidden = hidden[-2:, ...].view(batch_size, self.hidden_size, 2)
+        #    if self.bidirectional:
+        #        last_hidden = self.fc(last_hidden).view(batch_size, 1, self.hidden_size)
 
-        return out, last_hidden
+        #    if not i:
+        #        final_output = last_hidden
+        #    else:
+        #        final_output = torch.cat([final_output, last_hidden], dim=1)
+
+        return out
 
 
 class NLPModel(nn.Module):
@@ -86,14 +101,14 @@ class NLPModel(nn.Module):
 
 class FullModel(nn.Module):
 
-    def __init__(self, hidden_size=768, n_layers=2, drop_out=0.25, bidirectional=True):
+    def __init__(self, hidden_size=768, n_layers=8, drop_out=0.25, bidirectional=True):
         super().__init__()
         self.vid_model = VGGLSTM(hidden_size, n_layers, drop_out, bidirectional)
         self.nlp_model = NLPModel()
 
     def forward(self, video_inputs, decoder_inputs):
 
-        video_embeddings = self.vid_model(video_inputs)[1]  # Take only the last hidden state (position 0 is the seq outputs).
+        video_embeddings = self.vid_model(video_inputs)
         text = self.nlp_model(video_embeddings, decoder_inputs)
 
         return text
