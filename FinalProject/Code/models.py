@@ -22,6 +22,9 @@ class Identity(nn.Module):
 
 
 class VGGLSTM(nn.Module):
+    """
+    Video model - from raw video to video embedding.
+    """
     def __init__(self, hidden_size, n_layers, dropt, bi):
         super(VGGLSTM, self).__init__()
 
@@ -80,6 +83,9 @@ class VGGLSTM(nn.Module):
 
 
 class NLPModel(nn.Module):
+    """
+    NLP model - from video embedding (encoder inputs) to text.
+    """
 
     def __init__(self):
         super().__init__()
@@ -100,6 +106,9 @@ class NLPModel(nn.Module):
 
 
 class FullModel(nn.Module):
+    """
+    Full lip reading model from raw video to text.
+    """
 
     def __init__(self, hidden_size=768, n_layers=8, drop_out=0.25, bidirectional=True):
         super().__init__()

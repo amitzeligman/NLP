@@ -1,9 +1,4 @@
 import torch
-import logging
-from FinalProject.Code.models import NLPModel
-from FinalProject.Code.VideoDatasSet import VGGDataSet, collate_fn
-from FinalProject.Code.models import FullModel, MultiGpuModel
-import transformers
 
 from tqdm import tqdm
 
@@ -13,14 +8,6 @@ MAX_SEQUENCE_LENGTH = 100
 def train(data_loader, optimizer, model, loss_function, epochs, device, tokenizer, logger):
 
     model.train()
-
-    # If multiple GPU's exist use multi gpu model.
-    if torch.cuda.device_count() > 1:
-        model = MultiGpuModel(model)
-        logger.info('Using multi GPU mode with {} GPUS'.format(torch.cuda.device_count()))
-    model.to(device)
-
-    # All samles
     n_samples = len(data_loader)
 
     with tqdm(total=epochs) as epoch_progress:

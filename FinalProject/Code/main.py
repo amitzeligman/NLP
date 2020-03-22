@@ -6,24 +6,10 @@ from torch.nn import CrossEntropyLoss
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 from FinalProject.Code.train import train
+from FinalProject.Code.test import test
 from FinalProject.Code.VideoDatasSet import VGGDataSet, collate_fn
-from FinalProject.Code.models import FullModel
-from collections import OrderedDict
-
-
-
-def fix_state_dict(state_dict):
-
-    assert isinstance(state_dict, OrderedDict)
-
-    if list(state_dict.keys())[0].split('.')[0] == 'module':
-        new_state_dict = OrderedDict()
-        for k, v in state_dict.items():
-            name = k[7:]
-            new_state_dict[name] = v
-    else:
-        new_state_dict = state_dict
-    return new_state_dict
+from FinalProject.Code.models import FullModel, MultiGpuModel
+from FinalProject.Code.Utils import *
 
 
 if __name__ == '__main__':
@@ -38,7 +24,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Parameters
-    data_dir = '/media/cs-dl/HD_6TB/Data/Amit/trainval'
+    train_data_dir = '/media/cs-dl/HD_6TB/Data/Amit/trainval'
+    test_data_dir = '/media/cs-dl/HD_6TB/Data/Amit/test'
+
     log_path = '/home/cs-dl/tmp/logs/nlp.log'
     pre_trained_weights = '/media/cs-dl/HD_6TB/Data/Trained_models_nlp/0.pt'
 
@@ -54,12 +42,19 @@ if __name__ == '__main__':
     console.setLevel(logging.DEBUG)
     logger.addHandler(console)
 
+    # Model configuration
+    model = FullModel()
+    if pre_trained_weights is not None:
+        state_dict = fix_state_dict(torch.load(pre_trained_weights))
+        model.load_state_dict(state_dict)
+    if torch.cuda.device_count() > 1:
+        model = MultiGpuModel(model)
+        logger.info('Using multi GPU mode with {} GPUS'.format(torch.cuda.device_count()))
+    model.to(device)
+
+    # Training
     if args.train:
-        model = FullModel()
-        if pre_trained_weights is not None:
-            state_dict = fix_state_dict(torch.load(pre_trained_weights))
-            model.load_state_dict(state_dict)
-        data_set = VGGDataSet(data_dir)
+        data_set = VGGDataSet(train_data_dir)
         loss_function = CrossEntropyLoss()
         optimizer = Adam(params=model.parameters(), lr=learning_rate)
 
@@ -72,6 +67,17 @@ if __name__ == '__main__':
 
         trained_model = train(data_loader, optimizer, model, loss_function, train_epochs, device, tokenizer, logger)
 
+    # Testing
     if args.test:
-        raise NotImplementedError
+        data_set = VGGDataSet(test_data_dir)
+        data_loader = DataLoader(dataset=data_set,
+                                 collate_fn=collate_fn,
+                                 batch_size=1,
+                                 shuffle=False,
+                                 num_workers=0,
+                                 pin_memory=True)
+
+        scores = test(data_loader, model, device, tokenizer, logger)
+
+
 
