@@ -18,10 +18,11 @@ def collate_fn(batch):
 
 
 class VGGDataSet(torch.utils.data.Dataset):
-    def __init__(self, root_dir, transform=None):
+    def __init__(self, root_dir, video_crop_size=100, transform=None):
         self.data_path = root_dir
         videos_and_subtitles = self.get_videos_and_subtitles()
         self.metadata = pd.DataFrame({'VideoFile': videos_and_subtitles[0], 'SubtitleFile': videos_and_subtitles[1]})
+        self.video_crop_size = video_crop_size
         self.transform = transform
 
     def __len__(self):
@@ -38,6 +39,9 @@ class VGGDataSet(torch.utils.data.Dataset):
         video = video_obj[0]
         video_metadata = video_obj[2]
         subtitle = self.read_txt(subtitle_path)
+
+        # Crop video in center
+        video = self.crop_center(video, self.video_crop_size, self.video_crop_size)
 
         if self.transform:
             video = self.transform(video)
@@ -73,4 +77,10 @@ class VGGDataSet(torch.utils.data.Dataset):
                 y[key] = value
         return y
 
+    @staticmethod
+    def crop_center(video, cropx, cropy):
+        _, y, x, _ = video.shape
+        startx = x // 2 - (cropx // 2)
+        starty = y // 2 - (cropy // 2)
+        return video[:, starty:starty + cropy, startx:startx + cropx, :]
 
