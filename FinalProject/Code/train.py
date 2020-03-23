@@ -45,7 +45,9 @@ def train(data_loader, optimizer, model, loss_function, epochs, device, tokenize
                         tot_loss = 0
                         # Writing to T-Board
                         TBoard_writer.add_scaler('Loss/train', tot_loss / sample, epoch * len(data_loader) + iteration)
-                        TBoard_writer.add_image('Debug image (for check cropping)', videos[0], epoch * len(data_loader) + iteration)
+                        if len(videos.shape) == 4:
+                            videos = torch.unsqueeze(videos, dim=0)
+                        TBoard_writer.add_video('Video (for check cropping)', videos, epoch * len(data_loader) + iteration)
 
             #logger.info('total_loss: {}'.format(epoch_loss / n_samples))
             torch.save(model.state_dict(), '/media/cs-dl/HD_6TB/Data/Trained_models_nlp/{}.pt'.format(epoch))
