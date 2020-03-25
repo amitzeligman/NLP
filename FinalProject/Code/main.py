@@ -11,7 +11,7 @@ from FinalProject.Code.test import test
 from FinalProject.Code.VideoDatasSet import VGGDataSet, collate_fn
 from FinalProject.Code.models import FullModel, MultiGpuModel
 from FinalProject.Code.Utils import *
-import datetime
+from datetime import datetime
 import os
 
 
@@ -32,7 +32,7 @@ if __name__ == '__main__':
 
     log_path = '/home/cs-dl/tmp/logs/nlp.log'
     tboard_log_dir = './runs'
-    pre_trained_weights = '/media/cs-dl/HD_6TB/Data/Trained_models_nlp/0.pt'
+    pre_trained_weights = None#'/media/cs-dl/HD_6TB/Data/Trained_models_nlp/0.pt'
 
     train_epochs = 40
     learning_rate = 1e-4
@@ -40,8 +40,7 @@ if __name__ == '__main__':
 
     # Instantiation of T-Board summary writer
     tboard_curr_dir = os.path.join(tboard_log_dir, datetime.now().strftime("%Y%m%d-%H%M%S"))
-    if not(tboard_curr_dir):
-        os.makedirs(tboard_curr_dir)
+    os.makedirs(tboard_curr_dir, exist_ok=True)
     TBoard_writer = SummaryWriter(tboard_curr_dir)
 
     # Logger setting
@@ -88,6 +87,15 @@ if __name__ == '__main__':
                                  pin_memory=True)
 
         scores = test(data_loader, model, device, tokenizer, logger)
+
+        # TODO - algorithmic:
+        #  1. Beam search in prediction.
+        #  2. Another train branch of LM sentences.
+        #  3. Design video embeddings - Last hidden state or outputs of LSTM?, frames per id rate?.
+        #
+
+        # TODO - data:
+        #  1. Add sub sequence option in data loader.
 
 
 
