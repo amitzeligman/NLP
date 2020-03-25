@@ -1,7 +1,7 @@
 import torch
 from tqdm import tqdm
 
-MAX_SEQUENCE_LENGTH = 100
+MAX_SEQUENCE_LENGTH = 20
 
 
 def train(data_loader, optimizer, model, loss_function, epochs, device, tokenizer, logger, TBoard_writer):
@@ -32,7 +32,7 @@ def train(data_loader, optimizer, model, loss_function, epochs, device, tokenize
                     decoder_input_ids = decoder_input_ids.to(device)
 
                     outputs = model(videos, decoder_input_ids)
-                    loss = loss_function(outputs[0].view(l, -1), decoder_input_ids.view(-1))
+                    loss = outputs[0]
                     tot_loss += loss.item()
                     loss.backward()
                     optimizer.step()
@@ -41,10 +41,11 @@ def train(data_loader, optimizer, model, loss_function, epochs, device, tokenize
 
                     if not sample % 100:
                         logger.info('total_loss for {} samples: {}'.format(sample, tot_loss / sample))
+                        TBoard_writer.add_scalar('Loss/train', tot_loss / sample, epoch * len(data_loader) + iteration)
                         sample = 0
                         tot_loss = 0
                         # Writing to T-Board
-                        TBoard_writer.add_scaler('Loss/train', tot_loss / sample, epoch * len(data_loader) + iteration)
+
                         if len(videos.shape) == 4:
                             videos = torch.unsqueeze(videos, dim=0)
                         TBoard_writer.add_video('Video (for check cropping)', videos, epoch * len(data_loader) + iteration)

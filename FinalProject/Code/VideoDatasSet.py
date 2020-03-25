@@ -47,7 +47,7 @@ class VGGDataSet(torch.utils.data.Dataset):
             video = self.transform(video)
 
         # Permute channels to [n_frames, channels, height, width] and normalize to [0, 1]
-        video = (video.permute(0, -1, 1, 2) / 255).type(torch.float32)
+        video = (video.permute(0, -1, 1, 2)).type(torch.float32) / 255
 
         sample = {'video': video, 'video_md': video_metadata, 'subtitle': subtitle}
 

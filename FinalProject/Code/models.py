@@ -36,7 +36,7 @@ class VGGLSTM(nn.Module):
         self.cnn = models.vgg19(pretrained=True)
         self.cnn.classifier[-1] = Identity()
         self.rnn = nn.LSTM(
-            input_size=self.features_dim ,
+            input_size=self.features_dim,
             hidden_size=self.hidden_size,
             num_layers=self.num_layers,
             dropout=dropt,
@@ -100,6 +100,7 @@ class NLPModel(nn.Module):
         encoder_attention_mask = torch.ones(encoder_inputs.shape[:-1], device=encoder_inputs.device)
         outputs = self.model(encoder_input_ids=encoder_inputs,
                              decoder_input_ids=decoder_inputs,
+                             decoder_lm_labels=decoder_inputs,
                              encoder_attention_mask=encoder_attention_mask)
 
         return outputs
@@ -110,7 +111,7 @@ class FullModel(nn.Module):
     Full lip reading model from raw video to text.
     """
 
-    def __init__(self, hidden_size=768, n_layers=8, drop_out=0.25, bidirectional=True):
+    def __init__(self, hidden_size=768, n_layers=2, drop_out=0.25, bidirectional=True):
         super().__init__()
         self.vid_model = VGGLSTM(hidden_size, n_layers, drop_out, bidirectional)
         self.nlp_model = NLPModel()
