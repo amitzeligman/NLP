@@ -111,9 +111,10 @@ class FullModel(nn.Module):
     Full lip reading model from raw video to text.
     """
 
-    def __init__(self, hidden_size=768, n_layers=2, drop_out=0.25, bidirectional=True):
+    def __init__(self, params):
         super().__init__()
-        self.vid_model = VGGLSTM(hidden_size, n_layers, drop_out, bidirectional)
+        self.vid_model = VGGLSTM(params['lstm_hidden_size'], params['lstm_layers'], params['lstm_drop_out'],
+                                 params['bidirectional_lstm'])
         self.nlp_model = NLPModel()
 
     def forward(self, video_inputs, decoder_inputs):

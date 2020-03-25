@@ -2,17 +2,18 @@ import argparse
 import transformers
 import logging
 import torch
-from torch.nn import CrossEntropyLoss
+from datetime import datetime
+import os
 from torch.optim import Adam
 from torch.utils.data import DataLoader
+
 from torch.utils.tensorboard import SummaryWriter
+from FinalProject.Code.Config import Parameters
 from FinalProject.Code.train import train
 from FinalProject.Code.test import test
 from FinalProject.Code.VideoDatasSet import VGGDataSet, collate_fn
 from FinalProject.Code.models import FullModel, MultiGpuModel
 from FinalProject.Code.Utils import *
-from datetime import datetime
-import os
 
 
 if __name__ == '__main__':
@@ -27,24 +28,16 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Parameters
-    train_data_dir = '/media/cs-dl/HD_6TB/Data/Amit/trainval'
-    test_data_dir = '/media/cs-dl/HD_6TB/Data/Amit/test'
-
-    log_path = '/home/cs-dl/tmp/logs/nlp.log'
-    tboard_log_dir = './runs'
-    pre_trained_weights = None#'/media/cs-dl/HD_6TB/Data/Trained_models_nlp/0.pt'
-
-    train_epochs = 40
-    learning_rate = 1e-4
+    params = Parameters().params
     tokenizer = transformers.BertTokenizer.from_pretrained('bert-base-uncased')
 
     # Instantiation of T-Board summary writer
-    tboard_curr_dir = os.path.join(tboard_log_dir, datetime.now().strftime("%Y%m%d-%H%M%S"))
-    os.makedirs(tboard_curr_dir, exist_ok=True)
-    TBoard_writer = SummaryWriter(tboard_curr_dir)
+    tensor_board_curr_dir = os.path.join(params['tensor_board_log_dir'], datetime.now().strftime("%Y%m%d-%H%M%S"))
+    os.makedirs(tensor_board_curr_dir, exist_ok=True)
+    TBoard_writer = SummaryWriter(tensor_board_curr_dir)
 
     # Logger setting
-    logging.basicConfig(filename=log_path, filemode='a', format='%(asctime)s %(message)s')
+    logging.basicConfig(filename=params['log_path'], filemode='a', format='%(asctime)s %(message)s')
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
     console = logging.StreamHandler()
@@ -52,9 +45,9 @@ if __name__ == '__main__':
     logger.addHandler(console)
 
     # Model configuration
-    model = FullModel()
-    if pre_trained_weights is not None:
-        state_dict = fix_state_dict(torch.load(pre_trained_weights))
+    model = FullModel(params['model_params'])
+    if params['pre_trained_weights'] is not None:
+        state_dict = fix_state_dict(torch.load(params['pre_trained_weights']))
         model.load_state_dict(state_dict)
     if torch.cuda.device_count() > 1:
         model = MultiGpuModel(model)
@@ -63,9 +56,8 @@ if __name__ == '__main__':
 
     # Training
     if args.train:
-        data_set = VGGDataSet(train_data_dir)
-        loss_function = CrossEntropyLoss()
-        optimizer = Adam(params=model.parameters(), lr=learning_rate)
+        data_set = VGGDataSet(params['train_data_dir'])
+        optimizer = Adam(params=model.parameters(), lr=params['learning_rate'])
 
         data_loader = DataLoader(dataset=data_set,
                                  collate_fn=collate_fn,
@@ -74,11 +66,12 @@ if __name__ == '__main__':
                                  num_workers=0,
                                  pin_memory=True)
 
-        trained_model = train(data_loader, optimizer, model, loss_function, train_epochs, device, tokenizer, logger, TBoard_writer)
+        trained_model = train(data_loader, optimizer, model,
+                              params['epochs'], device, tokenizer, logger, TBoard_writer, params['weights_save_path'])
 
     # Testing
     if args.test:
-        data_set = VGGDataSet(test_data_dir)
+        data_set = VGGDataSet(params['test_data_dir'])
         data_loader = DataLoader(dataset=data_set,
                                  collate_fn=collate_fn,
                                  batch_size=1,
