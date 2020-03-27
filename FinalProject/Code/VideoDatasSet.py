@@ -18,8 +18,9 @@ def collate_fn(batch):
 
 
 class VGGDataSet(torch.utils.data.Dataset):
-    def __init__(self, root_dir, video_crop_size=100, transform=None):
+    def __init__(self, root_dir, subtitles_dir, video_crop_size=100, transform=None):
         self.data_path = root_dir
+        self.subtitles_dir = subtitles_dir
         videos_and_subtitles = self.get_videos_and_subtitles()
         self.metadata = pd.DataFrame({'VideoFile': videos_and_subtitles[0], 'SubtitleFile': videos_and_subtitles[1]})
         self.video_crop_size = video_crop_size
@@ -61,6 +62,8 @@ class VGGDataSet(torch.utils.data.Dataset):
         for _dir in all_dirs:
             mp4_in_dir = glob.glob('{}/{}/*.mp4'.format(self.data_path, _dir))
             txt_in_dir = [mp4.split('.mp4')[0] + '.txt' for mp4 in mp4_in_dir]
+            txt_in_dir = [f.replace(self.data_path, self.subtitles_dir) for f in txt_in_dir]
+            txt_in_dir = ['/'.join(f.split('/' or '\\')[:-1] + ['0' + f.split('/' or '\\')[-1][1:]]) for f in txt_in_dir]
 
             mp4_list = mp4_list + mp4_in_dir
             txt_list = txt_list + txt_in_dir
@@ -70,11 +73,21 @@ class VGGDataSet(torch.utils.data.Dataset):
     @staticmethod
     def read_txt(sub_file):
         y = {}
+        frames_info = []
+        flag = True
         with open(sub_file, "r") as infile:
             for line in infile:
-                key, value = line.strip().split(':')
-                value = value[2:]
-                y[key] = value
+                if line == '\n':
+                    flag = False
+                    continue
+                if flag:
+                    key, value = line.strip().split(':')
+                    value = value[2:]
+                    y[key] = value
+                else:
+                    frames_info.append(line.replace(' \n', '').split(' \t'))
+        frames_info_df = pd.DataFrame(data=frames_info[1:], columns=frames_info[0])
+        y['frame_info'] = frames_info_df
         return y
 
     @staticmethod
