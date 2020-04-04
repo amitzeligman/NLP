@@ -2,6 +2,7 @@ import torch
 from tqdm import tqdm
 import nltk
 import numpy as np
+from torchtext.data.metrics import bleu_score
 
 MAX_SEQUENCE_LENGTH = 100
 
@@ -31,8 +32,8 @@ def test(data_loader, model, device, tokenizer, logger):
             # Calculate BLEU score
             output_ids = torch.argmax(outputs[0], -1)
             output_sentences = tokenizer.decode(output_ids.view(-1))
-            scores.append(nltk.bleu([sentences], output_sentences))
-
+            # scores.append(nltk.bleu([sentences], output_sentences))
+            scores.append(bleu_score(output_sentences, [sentences]))
             progress.update()
             sample += 1
 
