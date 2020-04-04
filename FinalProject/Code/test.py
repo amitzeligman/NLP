@@ -32,7 +32,7 @@ def test(data_loader, model, device, tokenizer, logger):
             # Calculate BLEU score
             output_ids = torch.argmax(outputs[0], -1)
             output_sentences = tokenizer.decode(output_ids.view(-1))
-            # scores.append(nltk.bleu([sentences], output_sentences))
+            # Using PyTorch function (for more info: https://pytorch.org/text/data_metrics.html)
             scores.append(bleu_score(output_sentences, [sentences]))
             progress.update()
             sample += 1
